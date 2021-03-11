@@ -110,13 +110,14 @@ colors = ['purple','orange','cyan','red', 'green', 'blue','gray'] # A list with 
 targets = list(set(df2plot['PAM50'])) # ['Unknown', 'Basal', 'Normal', 'LumA', 'Her2', 'LumB', 'Not reported'] #PAM50" subtypes"
 color_dict = dict(zip(targets,colors)) # Again, create a dictionary to map the correct color to each sample based on their "PAM50" classification
 df2plot['color'] = df2plot['PAM50'].map(color_dict)
-df2plot_reported = PCA_df.loc[PCA_df['PAM50'] != 'Not reported'] # Let's filter out samples with no (NaN) PAM50 label using .loc and output the result into a new dataframe 
+
+df2plot_reported = df2plot.loc[df2plot['PAM50'] != 'Not reported'] # Let's filter out samples with no (NaN) PAM50 label using .loc and output the result into a new dataframe 
 
 
 
 # PLot PCA (only samples with PAM50 info)
 fig, ax1 = plt.subplots(1,1,figsize=(10,8)) # Creating a "Figure object"
-df2plot_reported.plot.scatter(ax=ax1,x='principal component 1', y='principal component 2', c='color', s = 20) # Plotting a scatter from a pandas dataframe
+df2plot_reported.plot.scatter(ax=ax1,x='principal component 1', y='principal component 2', c='color', s = 20, colorbar=False) # Plotting a scatter from a pandas dataframe
 
 # Add some info to the figure
 ax1.set_xlabel('Principal Component 1', fontsize = 12)
@@ -133,16 +134,19 @@ ax1.grid()
 #Display the plot
 plt.show()
 
+
+
 # We are going to repeat the plot, but instead just displaying the samples with PAM50 classification, let's show all samples in the TCGA-BRCA cohort, and see how they are distributed
 
 # PLot PCA (also not reported)
 fig,(ax1, ax2) = plt.subplots(1,2,figsize=(17,7))
 
 # There will be two plots. The one on the left, as previously done, it will only display PAM50-annotated samples
-df2plot_reported.plot.scatter(ax=ax1,x='principal component 1', y='principal component 2', c='color', s = 20)
+df2plot_reported.plot.scatter(ax=ax1,x='principal component 1', y='principal component 2', c='color', s = 20, colorbar=False)
 
 # The second plot will be on the right, and will show all TCGA-BRCA samples
-df2plot.plot.scatter(ax=ax2,x='principal component 1', y='principal component 2', c='color', s = 20, alpha = 0.5, label='PAM50')
+df2plot.plot.scatter(ax=ax2,x='principal component 1', y='principal component 2', c='color', s = 20, alpha = 0.5, label='PAM50', colorbar=False)
+
 
 ax1.set_xlabel('Principal Component 1', fontsize = 15)
 ax2.set_xlabel('Principal Component 1', fontsize = 15)
@@ -161,10 +165,47 @@ plt.show()
 
 
 
-# Explore 
-targetCol = 'primary_diagnosis.diagnoses'
-targetCol = 'pathologic_T'
 
-info = pd.read_csv('TCGA-BRCA.GDC_phenotype.tsv',sep='\t')
-principalDf[targetCol] = principalDf.index.to_series().map(dict(zip(list(info['submitter_id.samples']),list(info[targetCol]))))
-targets = list(set(finalDF[targetCol]))
+#### How to save dataframes into CSV files or Excel files?
+
+# In .csv format
+df2plot.to_csv('PCA_analysis_TCGA-BRCA_PAM50.csv',sep='\t')
+# In .xlsx format
+df2plot.to_excel('PCA_analysis_TCGA-BRCA_PAM50.xlsx')
+
+
+
+
+
+################################################################
+########################### BONUS ##############################
+################################################################
+
+### Bonus: .groupby()
+pheno.head()
+pheno.groupby('PAM50').count()
+pheno.groupby('PAM50').count().to_csv('PAM50_summary.csv',sep='\t')
+
+
+## Bonus: stats
+rnacounts.head()
+
+# Apply basic operations in one sample
+rnacounts['TCGA-E9-A1NI-01A'].mean()
+rnacounts['TCGA-A7-A13F-01A'].std()
+rnacounts['TCGA-E9-A1NI-01A'].sum()
+# Or all samples (the whole dataframe)
+rnacounts.mean()
+
+## Stats to copare sets of samples:
+pheno.head()
+pheno['sample'].loc[pheno['PAM50'] == 'LumA']
+
+lumA_samples =  list(pheno['sample'].loc[pheno['PAM50'] == 'LumA'])
+Basal_samples =  list(pheno['sample'].loc[pheno['PAM50'] == 'Basal'])
+
+# Combination of the .apply() function + "lambda" variable (called x in this example) to make a t-test (using scipy.stats.ttest_ind function) between LuminalA and Basal samples
+rnacounts['ttest_Luminal'] = rnacounts.apply(lambda x: scipy.stats.ttest_ind(x[lumA_samples], x[Basal_samples]), axis = 1)
+
+
+
